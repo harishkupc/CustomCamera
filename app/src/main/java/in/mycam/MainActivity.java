@@ -11,7 +11,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import in.mycam.fragments.ImageFragment;
 import in.mycam.fragments.OutputFragment;
 import in.mycam.fragments.VideoFragment;
 
@@ -42,7 +41,7 @@ public class MainActivity extends BaseActivity {
 
     public void setCameraPreview() {
         getSupportFragmentManager().beginTransaction()
-                .replace(R.id.container, ImageFragment.newInstance())
+                .replace(R.id.container, VideoFragment.newInstance())
                 .commit();
     }
 
@@ -64,15 +63,15 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-    public void outputImage(File mFile) {
+    public void outputImage(String mFile) {
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.container, OutputFragment.newInstance(mFile, IMAGE))
                 .commit();
     }
 
-    public void outputVideo(File mFile) {
+    public void outputVideo(String path) {
         getSupportFragmentManager().beginTransaction()
-                .replace(R.id.container, OutputFragment.newInstance(mFile, VIDEO))
+                .replace(R.id.container, OutputFragment.newInstance(path, VIDEO))
                 .commit();
     }
 

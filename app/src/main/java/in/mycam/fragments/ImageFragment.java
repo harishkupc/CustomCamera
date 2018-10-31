@@ -77,7 +77,10 @@ public class ImageFragment extends Fragment implements View.OnTouchListener, Vie
     LinearLayout control;
     Unbinder unbinder;
 
-    boolean isBackCamera = true;
+    public static final String CAMERA_FRONT = "1";
+    public static final String CAMERA_BACK = "0";
+
+    private String mainCameraId = CAMERA_BACK;
 
     private String TAG = ImageFragment.class.getSimpleName();
 
@@ -361,12 +364,18 @@ public class ImageFragment extends Fragment implements View.OnTouchListener, Vie
                 stopBackgroundThread();
                 startBackgroundThread();
 
+
+                if (mainCameraId.equals(CAMERA_BACK)) {
+                    mainCameraId = CAMERA_FRONT;
+                } else {
+                    mainCameraId = CAMERA_BACK;
+                }
+
                 if (texture.isAvailable()) {
                     openCamera(texture.getWidth(), texture.getHeight());
                 } else {
                     texture.setSurfaceTextureListener(mSurfaceTextureListener);
                 }
-                isBackCamera = !isBackCamera;
                 break;
         }
     }
@@ -422,20 +431,11 @@ public class ImageFragment extends Fragment implements View.OnTouchListener, Vie
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
         try {
             for (String cameraId : manager.getCameraIdList()) {
+                if (!cameraId.equals(mainCameraId)) {
+                    continue;
+                }
                 CameraCharacteristics characteristics
                         = manager.getCameraCharacteristics(cameraId);
-
-                // We don't use a front facing camera in this sample.
-                Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
-                /*if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT) {
-                    continue;
-                }*/
-
-                if (facing != null) {
-                    if (facing == CameraCharacteristics.LENS_FACING_BACK && !isBackCamera) {
-                        break;
-                    }
-                }
 
                 StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 if (map == null) {
@@ -537,8 +537,7 @@ public class ImageFragment extends Fragment implements View.OnTouchListener, Vie
             Surface surface = new Surface(mTexture);
 
             // We set up a CaptureRequest.Builder with the output Surface.
-            mPreviewRequestBuilder
-                    = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(surface);
 
             // Here, we create a CameraCaptureSession for camera preview.
@@ -619,7 +618,7 @@ public class ImageFragment extends Fragment implements View.OnTouchListener, Vie
 //                    showToast("Saved: " + mFile);
                     Log.d(TAG, mFile.toString());
                     unlockFocus();
-                    ((MainActivity) getActivity()).outputImage(mFile);
+                    ((MainActivity) getActivity()).outputImage(mFile.toString());
                 }
             };
 
@@ -769,6 +768,15 @@ public class ImageFragment extends Fragment implements View.OnTouchListener, Vie
             matrix.postRotate(90 * (rotation - 2), centerX, centerY);
         } else if (Surface.ROTATION_180 == rotation) {
             matrix.postRotate(180, centerX, centerY);
+        } /*I added this else*/ else {
+            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
+            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
+            float scale = Math.max(
+                    (float) viewHeight / mPreviewSize.getHeight(),
+                    (float) viewWidth / mPreviewSize.getWidth());
+            matrix.postScale(scale, scale, centerX, centerY);
+            matrix.postRotate(0, centerX, centerY);
+
         }
         texture.setTransform(matrix);
     }

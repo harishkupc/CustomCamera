@@ -50,12 +50,18 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.Unbinder;
 import in.mycam.AutoFitTextureView;
+import in.mycam.MainActivity;
 import in.mycam.R;
 
 
-public class VideoFragment extends Fragment implements View.OnTouchListener {
+public class VideoFragment extends Fragment implements View.OnTouchListener, View.OnClickListener {
 
     private static final String TAG = VideoFragment.class.getSimpleName();
+
+    public static final String CAMERA_FRONT = "1";
+    public static final String CAMERA_BACK = "0";
+
+    private String mainCameraId = CAMERA_BACK;
 
     @BindView(R.id.texture)
     AutoFitTextureView texture;
@@ -182,6 +188,8 @@ public class VideoFragment extends Fragment implements View.OnTouchListener {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         capture.setOnTouchListener(this);
+        cameraSwitch.setOnClickListener(this);
+        flash.setOnClickListener(this);
     }
 
     @Override
@@ -249,7 +257,13 @@ public class VideoFragment extends Fragment implements View.OnTouchListener {
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
-            String cameraId = manager.getCameraIdList()[0];
+            String cameraId = "0";
+            for (String camera : manager.getCameraIdList()) {
+                if (!camera.equals(mainCameraId)) {
+                    continue;
+                }
+                cameraId = camera;
+            }
 
             // Choose the sizes for camera preview and video recording
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
@@ -259,9 +273,10 @@ public class VideoFragment extends Fragment implements View.OnTouchListener {
             if (map == null) {
                 throw new RuntimeException("Cannot get available preview/video sizes");
             }
-            mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
-            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
-                    width, height, mVideoSize);
+//            mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
+//            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, mVideoSize);
+            mVideoSize = getOptimalPreviewSize(map.getOutputSizes(SurfaceTexture.class), width, height, mVideoSize);
+            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, mVideoSize);
 
             int orientation = getResources().getConfiguration().orientation;
             if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -308,6 +323,45 @@ public class VideoFragment extends Fragment implements View.OnTouchListener {
             matrix.postRotate(90 * (rotation - 2), centerX, centerY);
         }
         texture.setTransform(matrix);
+    }
+
+
+    private Size getOptimalPreviewSize(Size[] choices, int w, int h, Size aspectRatio) {
+
+        final double ASPECT_TOLERANCE = 0.2;
+        double targetRatio = (double) w / h;
+        if (choices == null)
+            return null;
+
+        Size optimalSize = null;
+        double minDiff = Double.MAX_VALUE;
+
+        int targetHeight = h;
+
+        // Try to find an size match aspect ratio and size
+        for (Size size : choices) {
+            Log.d("Camera", "Checking size " + size.getWidth() + "w " + size.getHeight() + "h");
+            double ratio = (double) size.getWidth() / size.getHeight();
+            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE)
+                continue;
+            if (Math.abs(size.getHeight() - targetHeight) < minDiff) {
+                optimalSize = size;
+                minDiff = Math.abs(size.getHeight() - targetHeight);
+            }
+        }
+
+        // Cannot find the one match the aspect ratio, ignore the
+        // requirement
+        if (optimalSize == null) {
+            minDiff = Double.MAX_VALUE;
+            for (Size size : choices) {
+                if (Math.abs(size.getHeight() - targetHeight) < minDiff) {
+                    optimalSize = size;
+                    minDiff = Math.abs(size.getHeight() - targetHeight);
+                }
+            }
+        }
+        return optimalSize;
     }
 
     private static Size chooseOptimalSize(Size[] choices, int width, int height, Size aspectRatio) {
@@ -502,8 +556,9 @@ public class VideoFragment extends Fragment implements View.OnTouchListener {
                     Toast.LENGTH_SHORT).show();
             Log.d(TAG, "Video saved: " + mNextVideoAbsolutePath);
         }
-        mNextVideoAbsolutePath = null;
         startPreview();
+        ((MainActivity) getActivity()).outputVideo(mNextVideoAbsolutePath);
+        mNextVideoAbsolutePath = null;
     }
 
     private void startPreview() {
@@ -539,6 +594,30 @@ public class VideoFragment extends Fragment implements View.OnTouchListener {
                     }, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.camera_switch:
+                closeCamera();
+                stopBackgroundThread();
+                startBackgroundThread();
+
+
+                if (mainCameraId.equals(CAMERA_BACK)) {
+                    mainCameraId = CAMERA_FRONT;
+                } else {
+                    mainCameraId = CAMERA_BACK;
+                }
+
+                if (texture.isAvailable()) {
+                    openCamera(texture.getWidth(), texture.getHeight());
+                } else {
+                    texture.setSurfaceTextureListener(mSurfaceTextureListener);
+                }
+                break;
         }
     }
 

@@ -1,5 +1,6 @@
 package in.mycam.fragments;
 
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -46,11 +47,13 @@ public class OutputFragment extends Fragment implements View.OnClickListener {
     @BindView(R.id.control)
     LinearLayout control;
 
-    public static OutputFragment newInstance(File file, String string) {
+    private String mPath = "";
+
+    public static OutputFragment newInstance(String path, String string) {
         OutputFragment fragment = new OutputFragment();
         Bundle bundle = new Bundle();
         bundle.putString(STRING, string);
-        bundle.putSerializable(FILE, file);
+        bundle.putString(FILE, path);
         fragment.setArguments(bundle);
         return fragment;
     }
@@ -65,7 +68,12 @@ public class OutputFragment extends Fragment implements View.OnClickListener {
             isImage = false;
         }
 
-        mFile = (File) bundle.getSerializable(FILE);
+        if (isImage) {
+            mFile = (File) bundle.getSerializable(FILE);
+        } else {
+            mPath = bundle.getString(FILE);
+        }
+
     }
 
     @Override
@@ -83,15 +91,17 @@ public class OutputFragment extends Fragment implements View.OnClickListener {
         retry.setOnClickListener(this);
         done.setOnClickListener(this);
 
-        if (mFile.exists()) {
-            if (isImage) {
+        if (isImage) {
+            if (mFile.exists()) {
                 Glide.with(this).load(mFile).into(image);
                 image.setVisibility(View.VISIBLE);
             } else {
-
+                ((MainActivity) getActivity()).setCameraPreview();
             }
         } else {
-            ((MainActivity) getActivity()).setCameraPreview();
+            video.setVisibility(View.VISIBLE);
+            video.setVideoURI(Uri.parse(mPath));
+            video.start();
         }
     }
 
