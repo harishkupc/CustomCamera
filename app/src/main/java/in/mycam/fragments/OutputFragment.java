@@ -13,8 +13,6 @@ import android.widget.VideoView;
 
 import com.bumptech.glide.Glide;
 
-import java.io.File;
-
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.Unbinder;
@@ -36,7 +34,7 @@ public class OutputFragment extends Fragment implements View.OnClickListener {
     private static final String FILE = "FILE";
     private static final String STRING = "STRING";
 
-    File mFile;
+    String mFile;
     boolean isImage = true;
 
     private static final String TAG = OutputFragment.class.getSimpleName();
@@ -69,7 +67,7 @@ public class OutputFragment extends Fragment implements View.OnClickListener {
         }
 
         if (isImage) {
-            mFile = (File) bundle.getSerializable(FILE);
+            mFile = bundle.getString(FILE);
         } else {
             mPath = bundle.getString(FILE);
         }
@@ -92,12 +90,8 @@ public class OutputFragment extends Fragment implements View.OnClickListener {
         done.setOnClickListener(this);
 
         if (isImage) {
-            if (mFile.exists()) {
-                Glide.with(this).load(mFile).into(image);
-                image.setVisibility(View.VISIBLE);
-            } else {
-                ((MainActivity) getActivity()).setCameraPreview();
-            }
+            Glide.with(this).load(mFile).into(image);
+            image.setVisibility(View.VISIBLE);
         } else {
             video.setVisibility(View.VISIBLE);
             video.setVideoURI(Uri.parse(mPath));

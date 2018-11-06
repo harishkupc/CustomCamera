@@ -53,7 +53,6 @@ import in.mycam.AutoFitTextureView;
 import in.mycam.MainActivity;
 import in.mycam.R;
 
-
 public class VideoFragment extends Fragment implements View.OnTouchListener, View.OnClickListener {
 
     private static final String TAG = VideoFragment.class.getSimpleName();

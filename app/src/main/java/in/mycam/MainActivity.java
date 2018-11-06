@@ -11,6 +11,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import in.mycam.fragments.ImageFragment;
 import in.mycam.fragments.OutputFragment;
 import in.mycam.fragments.VideoFragment;
 
@@ -75,7 +76,7 @@ public class MainActivity extends BaseActivity {
                 .commit();
     }
 
-    public void returnFile(File mFile) {
+    public void returnFile(String mFile) {
         finish();
     }
 }
